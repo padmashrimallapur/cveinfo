@@ -1,28 +1,46 @@
 import xml.etree.ElementTree as ET
+from types import NoneType
+from config import configs
 
 
-entry_schema = '{http://scap.nist.gov/schema/feed/vulnerability/2.0}entry'
-summary_schema = '{http://scap.nist.gov/schema/vulnerability/0.4}summary'
-cve_schema = '{http://scap.nist.gov/schema/vulnerability/0.4}cve-id'
-vulnerable_software_list_schema = '{http://scap.nist.gov/schema/vulnerability/0.4}vulnerable-software-list'
-products_schema = '{http://scap.nist.gov/schema/vulnerability/0.4}product'
+class XMLReader():
+    
+    def __init__(self, debug=False):
+        self.xml_file = configs['xml_file']
+        self.cves = {}
+        self.debug = debug
 
+    def xml_parser(self):
+        tree = ET.parse(self.xml_file)
+        root = tree.getroot()
+    
+        for element in root.findall(configs['entry_schema']):
+            cve_id = element.attrib['id']
+            cve = {'cve_id': element.find(configs['cve_schema']).text,
+                   'summary': element.find(configs['summary_schema']).text,
+                   'published_datetime': element.find(configs['published_datetime_schema']).text
+                   }
+            vuln_softwares = []
+            try:
+                vuln_products = element.find(configs['vulnerable_software_list_schema'])
+                if vuln_products is not None: 
+                    for product in vuln_products.findall(configs['products_schema']):
+                        vuln_softwares.append(product.text)
+            except NoneType:
+                if self.debug:
+                    print "No vulnerable software list found for ID ".format(cve_id)
+            
+            cve['vuln_softwares'] = vuln_softwares
+            
+            self.cves[cve_id] = cve
+        if self.debug:
+            for key, value in self.cves.items():
+                print("CVE: {0} \n\t Published date: {1} \n\t Summary: {2} \n\t Vulnerable Softwares: \n\t\t{3}".format(
+                    key, value['published_datetime'],
+                    value['summary'], "\n\t\t".join(value['vuln_softwares'])
+                ))
 
-def xml_parser(xml_file):
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-    cves = {}
-
-    for element in root.findall(entry_schema):
-        id = element.attrib['id']
-        cve = {'id': element.find(cve_schema), 'summary': element.find(summary_schema)}
-        vuln_softwares = []
-        for product in element.find(vulnerable_software_list_schema).findall(products_schema):
-            vuln_softwares.append(product.text)
-        cve['vuln_softwares'] = vuln_softwares
-        cves[id] = cve
-
-    for key, value in cves.items():
-        print("CVE: {0} \n\t Summary: {} \n Vulnerable Softwares: \n\t{}".format(
-            key, value['summary'], "\n".join(value['vuln_softwares'])
-        ))
+    def get_cves(self):
+        if len(self.cves) == 0:
+            self.xml_parser()
+        return self.cves

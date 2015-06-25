@@ -1,12 +1,16 @@
-from util import download_file, unzip
-from xmlExtractor import xml_parser
+#!/usr/bin/env python
 
-url = "http://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.zip"
-xml_file = "nvdcve-2.0-Modified.xml"
-xml_zip = "nvdcve-2.0-Modified.xml.zip"
-
+from util import download_file, parse_vulnerable_softwares, send_email
+from xmlExtractor import XMLReader
 
 if __name__ == "__main__":
-    # download_file(url, xml_zip)
-    # unzip(xml_zip)
-    xml_parser(xml_file)
+    download_file()
+    xmlReader = XMLReader()
+    xmlReader.xml_parser()
+    
+    vulnearble = parse_vulnerable_softwares(xmlReader.get_cves())
+    
+    if len(vulnearble) > 0:
+        msg = "{}".format("\n".join(vulnearble[::-1]))
+        print msg
+        send_email(msg)
