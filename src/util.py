@@ -11,6 +11,6 @@ def download_file(url, filename):
 
 
 def unzip(filename):
-    zip_file = zipfile.ZipFile(xml_file)
+    zip_file = zipfile.ZipFile(filename)
     zip_file.extractall(".")
     zip_file.close()
